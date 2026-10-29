@@ -188,7 +188,7 @@
         const currentCount = data.count || 0;
         const remaining = Math.max(0, MAX_CAPACITY - currentCount);
 
-        remainingCountEl.innerText = `${remaining} spot${remaining === 1 ? '' : 's'} left`;
+        remainingCountEl.innerText = `${remaining} left`;
 
         if (remaining <= 0) {
           submitBtn.disabled = true;
