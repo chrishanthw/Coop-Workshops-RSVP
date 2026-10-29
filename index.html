@@ -43,13 +43,25 @@
 
     .card-header {
       background-color: var(--primary);
-      padding: 1rem 2.5rem; /* Reduced height to ~75% of previous size */
+      padding: 1rem 1.5rem;
       color: white;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
     }
 
     .card-header h1 {
-      font-size: 1.4rem;
+      font-size: 1.25rem;
       font-weight: 700;
+    }
+
+    .header-counter {
+      font-size: 0.8rem;
+      font-weight: 600;
+      background: rgba(255, 255, 255, 0.2);
+      padding: 0.3rem 0.65rem;
+      border-radius: 20px;
+      white-space: nowrap;
     }
 
     .card-body {
@@ -133,6 +145,7 @@
   <div class="container">
     <div class="card-header">
       <h1>Workshop Registration</h1>
+      <div id="remainingCount" class="header-counter">Loading...</div>
     </div>
     <div class="card-body">
       <p class="subtitle">Please enter your details below to confirm your spot at our upcoming workshop. Space is limited so sign up soon!
@@ -158,12 +171,37 @@
   </div>
 
   <script>
-    // Replace with your Google Apps Script Web App URL
+    // Configuration
     const SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxhC7wW1xN_p6GhB4j5FOFUll6d7zitozdE6s2Mj4-9gaSJBv2vU2AcPE6wJfrc8pUh/exec';
+    const MAX_CAPACITY = 25; // Capacity limit variable
 
     const form = document.getElementById('rsvpForm');
     const submitBtn = document.getElementById('submitBtn');
     const statusMsg = document.getElementById('status');
+    const remainingCountEl = document.getElementById('remainingCount');
+
+    // Fetch and display current remaining spots
+    async function updateRemainingSpots() {
+      try {
+        const response = await fetch(SCRIPT_URL);
+        const data = await response.json();
+        const currentCount = data.count || 0;
+        const remaining = Math.max(0, MAX_CAPACITY - currentCount);
+
+        remainingCountEl.innerText = `${remaining} spot${remaining === 1 ? '' : 's'} left`;
+
+        if (remaining <= 0) {
+          submitBtn.disabled = true;
+          submitBtn.innerText = 'Event Full';
+          document.getElementById('fullName').disabled = true;
+          document.getElementById('email').disabled = true;
+          statusMsg.className = 'status-msg error';
+          statusMsg.innerText = 'Sorry, this event has reached full capacity.';
+        }
+      } catch (err) {
+        remainingCountEl.innerText = `Capacity: ${MAX_CAPACITY}`;
+      }
+    }
 
     form.addEventListener('submit', async (e) => {
       e.preventDefault();
@@ -175,13 +213,14 @@
 
       const payload = {
         fullName: document.getElementById('fullName').value,
-        email: document.getElementById('email').value
+        email: document.getElementById('email').value,
+        capacity: MAX_CAPACITY
       };
 
       try {
         await fetch(SCRIPT_URL, {
           method: 'POST',
-          mode: 'no-cors', // Bypasses CORS requirements for Google Apps Script redirects
+          mode: 'no-cors',
           headers: {
             'Content-Type': 'application/json'
           },
@@ -191,14 +230,22 @@
         statusMsg.className = 'status-msg success';
         statusMsg.innerText = 'Thank you! Your RSVP has been received.';
         form.reset();
+        
+        // Refresh counter immediately after submitting
+        updateRemainingSpots();
       } catch (err) {
         statusMsg.className = 'status-msg error';
         statusMsg.innerText = 'Oops! Something went wrong. Please try again.';
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerText = 'Register Now';
+        if (!submitBtn.disabled) {
+          submitBtn.disabled = false;
+          submitBtn.innerText = 'Register Now';
+        }
       }
     });
+
+    // Load remaining spots on page load
+    updateRemainingSpots();
   </script>
 
 </body>
